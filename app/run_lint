@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+set -e
+
+mypy --install-types --non-interactive --strict -m main
+
+find . -not \( -path "*mypy_cache/*" -o -path "*__pycache__/*" -prune \) -type f -name "*.py" | xargs pylint

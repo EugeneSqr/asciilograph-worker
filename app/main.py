@@ -1,19 +1,42 @@
 import sys
 import os
 import signal
-from time import sleep
+import asyncio
+from types import FrameType
 
 from settings import get_settings
+from queues import get_channel, image_processing_messages, return_processed_image
 
-def signal_handler(signum, frame):
+def _signal_handler(signum: int, _: FrameType | None) -> None:
     print(f"Signal received {signal.Signals(signum).name} ({signum})")
-    print(f"Restarting the worker process")
+    print("Restarting the worker process")
+    asyncio.get_running_loop().stop()
     os.execl(sys.executable, sys.executable, * sys.argv)
-    print(f"Restarting done")
+    print("Restarting done")
 
-signal.signal(signal.SIGHUP, signal_handler)
+signal.signal(signal.SIGHUP, _signal_handler)
+
+async def start_worker(worker_id: int) -> None:
+    print(f"worker {worker_id} has started")
+    future = asyncio.get_running_loop().create_future()
+    async with get_channel() as channel:
+        async for message in image_processing_messages(channel):
+            async with message.process(requeue=False):
+                await return_processed_image(
+                    channel,
+                    "processed image",
+                    message.correlation_id,
+                    message.reply_to,
+                )
+    await future
+    print(f"worker {worker_id} has finished")
+
+async def main() -> None:
+    print("starting workers")
+    async with asyncio.TaskGroup() as worker_tasks:
+        for i in range(get_settings().workers_count):
+            worker_tasks.create_task(start_worker(i))
+    print("all workers done")
 
 if __name__ == "__main__":
-    while True:
-        print(">>>>", get_settings())
-        sleep(10)
+    asyncio.run(main())

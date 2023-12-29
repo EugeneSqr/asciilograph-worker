@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     rabbitmq_image_processing_queue: str
     rabbitmq_connection_pool_size: int = 100
     timeout_seconds: int = 5
+    workers_count: int = 2
 
 @lru_cache
 def get_settings() -> Settings:
