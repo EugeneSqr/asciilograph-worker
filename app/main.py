@@ -19,27 +19,30 @@ def _signal_handler(signum: int, _: FrameType | None) -> None:
 
 signal.signal(signal.SIGHUP, _signal_handler)
 
-async def start_worker(worker_id: int) -> None:
+async def start_worker(worker_id: int, worker_tasks: asyncio.TaskGroup) -> None:
     print(f"worker {worker_id} has started")
-    future = asyncio.get_running_loop().create_future()
-    async with get_channel() as channel:
-        async for message in image_processing_messages(channel):
-            async with message.process(requeue=False):
-                ascii_art = AsciiArt.from_pillow_image(await download_image(message.body.decode()))
-                await return_processed_image(
-                    channel,
-                    ascii_art.to_ascii(),
-                    message.correlation_id,
-                    message.reply_to,
-                )
-    await future
+    try:
+        async with get_channel() as channel:
+            async for message in image_processing_messages(channel):
+                async with message.process(requeue=False):
+                    ascii_art = AsciiArt.from_pillow_image(
+                        await download_image(message.body.decode()))
+                    await return_processed_image(
+                        channel,
+                        ascii_art.to_ascii(),
+                        message.correlation_id,
+                        message.reply_to,
+                    )
+    except Exception as e:
+        print(f"something went wrong, restarting worker {worker_id}", e)
+        worker_tasks.create_task(start_worker(worker_id, worker_tasks))
     print(f"worker {worker_id} has finished")
 
 async def main() -> None:
     print("starting workers")
     async with asyncio.TaskGroup() as worker_tasks:
         for i in range(get_settings().workers_count):
-            worker_tasks.create_task(start_worker(i))
+            worker_tasks.create_task(start_worker(i, worker_tasks))
     print("all workers done")
 
 if __name__ == "__main__":
