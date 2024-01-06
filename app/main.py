@@ -27,8 +27,12 @@ async def start_worker(worker_id: int, worker_tasks: asyncio.TaskGroup) -> None:
         async with get_channel() as channel:
             async for message in image_processing_messages(channel):
                 async with message.process(requeue=False):
-                    ascii_art = AsciiArt.from_pillow_image(
-                        await download_image(message.body.decode()))
+                    image_key = message.body.decode()
+                    logging.info("processing image")
+                    image = await download_image(message.body.decode())
+                    logging.info("done downloading image")
+                    ascii_art = AsciiArt.from_pillow_image(image)
+                    logging.info("done converting to ascii art")
                     await return_processed_image(
                         channel,
                         ascii_art.to_ascii(),

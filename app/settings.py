@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     fileserver_user: str
     fileserver_password: str
     timeout_seconds: int = 5
-    workers_count: int = 2
+    workers_count: int = 5
 
 @lru_cache
 def get_settings() -> Settings:
