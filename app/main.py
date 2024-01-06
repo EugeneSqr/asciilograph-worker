@@ -36,7 +36,7 @@ async def start_worker(worker_id: int, worker_tasks: asyncio.TaskGroup) -> None:
                         message.reply_to,
                     )
     except Exception as e:
-        logging.error(f"something went wrong, restarting worker {worker_id}", e)
+        logging.error(f"something went wrong, restarting worker {worker_id}: {e}")
         worker_tasks.create_task(start_worker(worker_id, worker_tasks))
     logging.info(f"worker {worker_id} has finished")
 
