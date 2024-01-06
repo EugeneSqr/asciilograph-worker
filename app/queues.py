@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
 
@@ -21,7 +22,7 @@ async def _get_connection() -> AbstractConnection:
         try:
             return await aio_pika.connect(connection_string, timeout=get_settings().timeout_seconds)
         except aio_pika.exceptions.AMQPConnectionError:
-            print(f"couldn't connect to {get_settings().rabbitmq_host}, retrying...")
+            logging.info(f"couldn't connect to {get_settings().rabbitmq_host}, retrying...")
             await asyncio.sleep(2)
 
 _connection_pool: Pool[AbstractConnection] = Pool(
@@ -40,9 +41,9 @@ async def image_processing_messages(
     queue = await _get_image_processing_queue(channel)
     async with queue.iterator() as messages:
         async for message in messages:
-            print(f"got message {message} from message processing queue")
+            logging.info(f"got message {message} from message processing queue")
             yield message
-            print("message processed")
+            logging.info("message processed")
 
 async def return_processed_image(
     channel: AbstractChannel,
