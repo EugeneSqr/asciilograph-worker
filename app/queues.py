@@ -13,6 +13,7 @@ from aio_pika.abc import (
 )
 
 from settings import get_settings
+from logger import set_correlation_id
 
 async def _get_connection() -> AbstractConnection:
     connection_string = (f"amqp://{get_settings().rabbitmq_user}:"
@@ -41,6 +42,7 @@ async def image_processing_messages(
     queue = await _get_image_processing_queue(channel)
     async with queue.iterator() as messages:
         async for message in messages:
+            set_correlation_id(message.correlation_id)
             logging.info(f"got message {message} from message processing queue")
             yield message
             logging.info("message processed")

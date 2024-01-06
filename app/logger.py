@@ -1,18 +1,23 @@
 import logging
 from logging.config import dictConfig
 from time import gmtime
+from contextvars import ContextVar
 from typing import Optional
 
+_DEFAULT_CORRELATION_ID = "-"
+
+_correlation_id: ContextVar[Optional[str]] = ContextVar("correlation_id")
+
 class CorrelationIdFilter(logging.Filter):
-    def __init__(self, name: str = "", default_value: Optional[str] = None):
+    def __init__(self, name: str = ""):
         super().__init__(name=name)
-        self.default_value = default_value
 
     def filter(self, record: logging.LogRecord) -> bool:
-        cid = "aaa"
-        #cid = correlation_id.get(self.default_value)
-        record.correlation_id = cid
+        record.correlation_id = _correlation_id.get(_DEFAULT_CORRELATION_ID)
         return True
+
+def set_correlation_id(correlation_id: Optional[str]) -> None:
+    _correlation_id.set(_DEFAULT_CORRELATION_ID if correlation_id is None else correlation_id)
 
 def configure_logging() -> None:
     format_string = "[%(levelname)s] [%(asctime)s.%(msecs)03dZ] [%(correlation_id)s] %(message)s"
@@ -22,7 +27,6 @@ def configure_logging() -> None:
         "filters": {
             "correlation_id": {
                 "()": "logger.CorrelationIdFilter",
-                "default_value": "-",
             },
         },
         "formatters": {
