@@ -32,13 +32,13 @@ async def start_worker(worker_id: int, worker_tasks: asyncio.TaskGroup) -> None:
                     image = await download_image(message.body.decode())
                     logging.info("done downloading image")
                     ascii_art = AsciiArt.from_pillow_image(image)
-                    logging.info("done converting to ascii art")
                     await return_processed_image(
                         channel,
                         ascii_art.to_ascii(),
                         message.correlation_id,
                         message.reply_to,
                     )
+                    logging.info("done converting to ascii art")
     except Exception as e:
         logging.error(f"something went wrong, restarting worker {worker_id}: {e}")
         worker_tasks.create_task(start_worker(worker_id, worker_tasks))
